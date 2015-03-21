@@ -1,0 +1,79 @@
+// by srtuss (modified slightly)
+
+#define NSPC 256
+#define pi2 6.283185307179586476925286766559
+
+vec2 synth1(float t)
+{
+	vec2 v = vec2(0.0);
+	float base = 50.0 + sin(t * 0.1) * 20.0;
+	float flt = cos(t * 1.0) * 6.0 + 10.0;
+	float fmd = smoothstep(-0.1, 0.1, sin(t * 1.0)) * 100.0;
+	for(int i = 0; i < NSPC; i ++)
+	{
+		float h = float(i + 1);
+		float inten = 1.0 / h;
+		
+		vec2 ti = texture2D(iChannel3, vec2(h / 256.0, t * 0.1)).xy;
+		
+		float f = ti.y * fmd;
+		
+		inten *= pow(ti.x, 8.0);
+		inten *= exp(-max(4.0 - h * 2.0, 0.0));
+		inten *= mod(h, 2.0);
+		
+		v.x += inten * sin(0.5 + pi2 * (t * base * h) + f);
+		v.y += inten * sin(pi2 * (t * base * h) + f);
+	}
+	return v;
+}
+
+float rnd(float x)
+{
+	return fract(sin(x * 197.972) * 29728.58762);
+}
+
+float band(float h, float t)
+{
+	t *= 0.3;
+	float s = sin(t * pi2 * 0.5) + 1.01;
+	return smoothstep(s * 0.1, 0.0, mod(t - rnd(h), rnd(-h) * 3.0 + 0.5));
+}
+
+vec2 synth2(float t)
+{
+	vec2 v = vec2(0.0);
+	float base = 90.0;
+	float flt = cos(t * 1.0) * 6.0 + 10.0;
+	for(int i = 0; i < NSPC; i ++)
+	{
+		float h = float(i + 1);
+		float inten = 1.0 / h;
+	
+		inten *= band(h, t);
+		
+		v.x += inten * sin(t + pi2 * (t * base * h));
+		v.y += inten * sin(pi2 * (t * base * h));
+	}
+	return v;
+}
+
+vec2 mainSound(float time)
+{
+	vec2 m1 = synth1(time);
+	float ec = 0.5, fb = 0.8, et = 0.3, tm = 0.3;
+	m1 += synth1(time - et) * ec * vec2(1.0, 0.2); ec *= fb; et += tm;
+	m1 += synth1(time - et) * ec * vec2(0.2, 1.0); ec *= fb; et += tm;
+	m1 += synth1(time - et) * ec * vec2(1.0, 0.2); ec *= fb; et += tm;
+	m1 += synth1(time - et) * ec * vec2(0.2, 1.0); ec *= fb; et += tm;
+	
+	vec2 m2 = synth2(time);
+	ec = 0.5, fb = 0.8, et = 0.3, tm = 0.3;
+	m2 += synth2(time - et).yx * ec * vec2(1.0, 0.5); ec *= fb; et += tm;
+	m2 += synth2(time - et) * ec * vec2(0.5, 1.0); ec *= fb; et += tm;
+	m2 += synth2(time - et).yx * ec * vec2(1.0, 0.5); ec *= fb; et += tm;
+	m2 += synth2(time - et) * ec * vec2(0.5, 1.0); ec *= fb; et += tm;
+	
+	return 1.3*m1 + 0.1*m2;
+	//return 0.7*m1 + 0.6*m2;
+}
